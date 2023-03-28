@@ -1,4 +1,4 @@
-import yaml, sys, requests, openai
+import yaml, sys, requests, openai, time, pickle
 from bs4 import BeautifulSoup
 
 def configure():
@@ -8,7 +8,7 @@ def configure():
         # edit yaml here
         data["configured"] = 1
 
-        data["robinhoodAPIKey"] = input("robinhood api key: ")
+        data["alpacaAPIKey"] = input("alpaca api key: ")
         data["openaiAPIKey"] = input("openai api key: ")
         data["value"] = int(input("Amount for put options: "))
 
@@ -16,8 +16,9 @@ def configure():
     with open('config.yaml', 'w') as file:
         yaml.dump(data,file,sort_keys=False)
 
-def scrape():
-    page = requests.get("http://hindenburgresearch.com/block/")
+def scrape(url):
+    # "http://hindenburgresearch.com/block/"
+    page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser")
 
     tag = soup.body
@@ -35,7 +36,35 @@ def scrape():
     
     return ret
 
+def get_ticker(scrape_input):
+    a = scrape_input
+    openai.api_key = config["openaiAPIKey"]
 
+    # TODO: engineer prompt with scrape input
+    # and extract ticker to be returned with
+    # regex
+
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "user", "content": 'Hi there!'}
+        ]
+    )
+
+    return response
+
+def check():
+    url = "http://hindenburgresearch.com/"
+    page = requests.get(url)
+    soup = BeautifulSoup(page.content, "html.parser")
+
+    check = soup.find("div", class_="post-heading").findChildren("h1", recursive=False)[0].findChildren("a", recursive=False)[0].get("href")
+
+    return check
+
+# TODO: make alpaca short sell function
+
+# SETUP
 with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
@@ -49,16 +78,43 @@ if configured == 0:
     configure()
     quit()
 
+link_chache = {""}
+ticker_cache = {""}
+
+with open('link_cache.pkl', 'rb') as fp:
+    link_chache = pickle.load(fp)
+
+with open('ticker_cache.pkl', 'rb') as fp:
+    ticker_cache = pickle.load(fp)
+
+
+# MAIN
 if (len(sys.argv) == 2) and (sys.argv[1] == "start"):
-    scrapedText = scrape()
+    # scraped_text = scrape("http://hindenburgresearch.com/block/")
+    # print(scraped_text)
+    # print(get_ticker("test"))
+    print("___MAIN___")
+    loop = 0
+    while loop < 4:
+        # print("_____________")
+        # print(link_chache)
+        top_link = check()
+        if top_link not in link_chache:
+            link_chache.add(top_link)
+            article_text = scrape(top_link)
+            
+            # TODO: pass article text to get_ticker()
 
-    openai.api_key = config["openaiAPIKey"]
+            # TODO: pass ticker to alpaca function
 
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "user", "content": 'Hi there!'}
-        ]
-    )
-    
-    print(response)
+        # print("_______sleeping_______")
+        loop += 1
+        time.sleep(5)
+
+
+# SAVE
+with open('link_cache.pkl', 'wb') as fp:
+    pickle.dump(link_chache, fp)
+
+with open('ticker_cache.pkl', 'wb') as fp:
+    pickle.dump(ticker_cache, fp)
