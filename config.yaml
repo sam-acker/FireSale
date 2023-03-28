@@ -1,4 +1,4 @@
----
-configured: 0
-robinhoodAPIKey: "robinhoodkey000"
-openaiAPIKey: "openapikey111"
+configured: 1
+robinhoodAPIKey: test
+openaiAPIKey: test
+value: 1000
