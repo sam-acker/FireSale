@@ -1,4 +1,5 @@
 configured: 1
 alpacaAPIKey: test
+alpacaSecret: test
 openaiAPIKey: test
 value: 1000
